@@ -3,7 +3,7 @@
 -behaviour(gen_leader).
 
 %% API
--export([start_link/1, start_link/2]).
+-export([start_link/0,start_link/1, start_link/2]).
 
 %% gen_leader callbacks
 -export([init/1,
@@ -36,6 +36,19 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
+start_link() ->
+	[Live] = [X || {live,X} <- application:get_all_env(master)],
+	Connect = lists:map(
+		fun(X) ->
+				net_kernel:connect(X)
+		end,Live),
+	Start = lists:foldl(fun(X,Y) -> X or Y end,false,Connect),
+	case Start of
+		true -> start_link([node()|nodes()]);
+		false -> 
+			error("cant connect to nodes ~p ~n",[Live])
+	end.
+
 start_link(Nodes) ->
     start_link(Nodes, []).
 
@@ -72,7 +85,9 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 elected(State, _Election, undefined) ->
+	[MasterScript] = [X || {master_script,X} <- application:get_all_env(master)],
 	io:format("is master \n"),
+	spawn(fun() -> os:cmd(MasterScript) end),
     Synch = [],
     {ok, Synch, State};
 
@@ -100,6 +115,8 @@ elected(State, _Election, _Node) ->
 %%--------------------------------------------------------------------
 surrendered(State, _Synch, _Eelection) ->
 	io:format("is slave \n "),
+	[SlaveScript] = [X || {slave_script,X} <- application:get_all_env(master)],
+	spawn(fun() -> os:cmd(SlaveScript) end),
     {ok, State}.
 
 %%--------------------------------------------------------------------
