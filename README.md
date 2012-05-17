@@ -1,4 +1,5 @@
 Simple tool for master-slave configure.
+use Erlang R15B
 
 for configure change
 rel/files/sys.config
