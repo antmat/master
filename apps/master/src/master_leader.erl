@@ -3,7 +3,7 @@
 -behaviour(gen_leader).
 
 %% API
--export([start_link/0,start_link/1, start_link/2]).
+-export([start_link/0,start_link/1, start_link/2, status/0]).
 
 %% gen_leader callbacks
 -export([init/1,
@@ -22,9 +22,11 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {}).
+-record(state, {state}).
 
 
+status() ->
+	gen_leader:call(?MODULE,status).
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -89,7 +91,7 @@ elected(State, _Election, undefined) ->
 	io:format("is master \n"),
 	spawn(fun() -> os:cmd(MasterScript) end),
     Synch = [],
-    {ok, Synch, State};
+    {ok, Synch, State#state{state = master}};
 
 %%--------------------------------------------------------------------
 %% @private
@@ -117,7 +119,7 @@ surrendered(State, _Synch, _Eelection) ->
 	io:format("is slave \n "),
 	[SlaveScript] = [X || {slave_script,X} <- application:get_all_env(master)],
 	spawn(fun() -> os:cmd(SlaveScript) end),
-    {ok, State}.
+    {ok, State#state{state = slave}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -188,6 +190,9 @@ handle_DOWN(_Node, State, _Election) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call(status, _From, State, _Election) ->
+	{reply, State#state.state, State};
+
 handle_call(_Request, _From, State, _Election) ->
     Reply = ok,
     {reply, Reply, State}.
