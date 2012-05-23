@@ -10,10 +10,13 @@
 #export DH_VERBOSE=1
 
 APP_PATH=/var/lib/msdetector
-DEBIAN_PATH=debian/context-itim
+DEBIAN_PATH=debian/master-slave-detector
 TARGET_PATH=$(DEBIAN_PATH)/$(APP_PATH)
 CONF_DIR=/etc/msdetector
 
+
+override_dh_auto_clean:
+	./rebar clean
 
 override_dh_auto_build:
 	./rebar get-deps
@@ -23,9 +26,9 @@ override_dh_auto_build:
 override_dh_auto_install:
 	mkdir -p ${TARGET_PATH}
 	mkdir -p ${DEBIAN_PATH}/${CONF_DIR}
-	cp releases/1/vm.args ${DEBIAN_PATH}/${CONF_DIR}/
-	cp releases/1/sys.config ${DEBIAN_PATH}/${CONF_DIR}/app.config
-	rsync --exclude '.svn' -aq bin erts-5.9 lib ${TARGET_PATH}/
+	cp rel/master/releases/1/vm.args ${DEBIAN_PATH}/${CONF_DIR}/
+	cp rel/master/releases/1/sys.config ${DEBIAN_PATH}/${CONF_DIR}/app.config
+	rsync --exclude '.svn' -aq  rel/master/releases rel/master/bin rel/master/erts* rel/master/lib ${TARGET_PATH}/
 
 %:
 	dh $@ 

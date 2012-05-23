@@ -1,154 +1,205 @@
 #!/bin/sh
-### BEGIN INIT INFO
-# Provides:          master-slave-detector
-# Required-Start:    $network $local_fs
-# Required-Stop:
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: <Enter a short description of the sortware>
-# Description:       <Enter a long description of the software>
-#                    <...>
-#                    <...>
-### END INIT INFO
+# -*- tab-width:4;indent-tabs-mode:nil -*-
+# ex: ts=4 sw=4 et
 
-# Author: Anton Matveenko <antmat@nigma.ru>
+CUR_PWD=$PWD
+cd /var/lib/msdetector/
+/var/lib/msdetector/bin/master $1
+RET=$?
+cd $CUR_PWD
 
-# PATH should only include /usr/* if it runs after the mountnfs.sh script
-PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC=master-slave-detector             # Introduce a short description here
-NAME=master-slave-detector             # Introduce the short server's name here
-DAEMON=/usr/sbin/master-slave-detector # Introduce the server's location here
-DAEMON_ARGS=""             # Arguments to run the daemon with
-PIDFILE=/var/run/$NAME.pid
-SCRIPTNAME=/etc/init.d/$NAME
+exit $RET
 
-# Exit if the package is not installed
-[ -x $DAEMON ] || exit 0
+RUNNER_BASE_DIR=/var/lib/msdetector
+RUNNER_ETC_DIR=/etc/msdetector
+RUNNER_LOG_DIR=/var/log/msdetector
+# Note the trailing slash on $PIPE_DIR/
+PIPE_DIR=/tmp/msdetector/
+RUNNER_USER=msdetector
 
-# Read configuration variable file if it is present
-[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+# Make sure log directory exists
+mkdir -p $RUNNER_LOG_DIR
+chown -R msdetector:root $RUNNER_LOG_DIR
+# Make sure this script is running as the appropriate user
+#if [ ! -z "$RUNNER_USER" ] && [ `whoami` != "$RUNNER_USER" ]; then
+#    exec sudo -u $RUNNER_USER -i
+#fi
 
-# Load the VERBOSE setting and other rcS variables
-. /lib/init/vars.sh
+CUR_PWD=`pwd`
+# Make sure CWD is set to runner base dir
+cd $RUNNER_BASE_DIR
 
-# Define LSB log_* functions.
-# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
-. /lib/lsb/init-functions
+# Identify the script name
+SCRIPT=`basename $0`
 
-#
-# Function that starts the daemon/service
-#
-do_start()
-{
-	# Return
-	#   0 if daemon has been started
-	#   1 if daemon was already running
-	#   2 if daemon could not be started
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
-		|| return 1
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- \
-		$DAEMON_ARGS \
-		|| return 2
-	# Add code here, if necessary, that waits for the process to be ready
-	# to handle requests from services started subsequently which depend
-	# on this one.  As a last resort, sleep for some time.
-}
+# Parse out release and erts info
+START_ERL=`cat $RUNNER_BASE_DIR/releases/start_erl.data`
+ERTS_VSN=${START_ERL% *}
+APP_VSN=${START_ERL#* }
 
-#
-# Function that stops the daemon/service
-#
-do_stop()
-{
-	# Return
-	#   0 if daemon has been stopped
-	#   1 if daemon was already stopped
-	#   2 if daemon could not be stopped
-	#   other if a failure occurred
-	start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name $NAME
-	RETVAL="$?"
-	[ "$RETVAL" = 2 ] && return 2
-	# Wait for children to finish too if this is a daemon that forks
-	# and if the daemon is only ever run from this initscript.
-	# If the above conditions are not satisfied then add some other code
-	# that waits for the process to drop all resources that could be
-	# needed by services started subsequently.  A last resort is to
-	# sleep for some time.
-	start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
-	[ "$?" = 2 ] && return 2
-	# Many daemons don't delete their pidfiles when they exit.
-	rm -f $PIDFILE
-	return "$RETVAL"
-}
+VMARGS_PATH="$RUNNER_ETC_DIR/vm.args"
+echo "$VMARGS_PATH"
 
-#
-# Function that sends a SIGHUP to the daemon/service
-#
-do_reload() {
-	#
-	# If the daemon can reload its configuration without
-	# restarting (for example, when it is sent a SIGHUP),
-	# then implement that here.
-	#
-	start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE --name $NAME
-	return 0
-}
+CONFIG_PATH="$RUNNER_ETC_DIR/app.config"
+echo "$CONFIG_PATH"
+# Extract the target node name from node.args
+NAME_ARG=`egrep '^-s?name' $VMARGS_PATH`
+if [ -z "$NAME_ARG" ]; then
+    echo "vm.args needs to have either -name or -sname parameter."
+    exit 1
+fi
 
+# Extract the target cookie
+COOKIE_ARG=`grep '^-setcookie' $VMARGS_PATH`
+if [ -z "$COOKIE_ARG" ]; then
+    echo "vm.args needs to have a -setcookie parameter."
+    exit 1
+fi
+
+# Add ERTS bin dir to our path
+ERTS_PATH=$RUNNER_BASE_DIR/erts-$ERTS_VSN/bin
+
+# Setup command to control the node
+NODETOOL="$ERTS_PATH/escript $ERTS_PATH/nodetool $NAME_ARG $COOKIE_ARG"
+
+# Check the first argument for instructions
 case "$1" in
-  start)
-    [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC " "$NAME"
-    do_start
-    case "$?" in
-		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-	esac
-  ;;
-  stop)
-	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
-	do_stop
-	case "$?" in
-		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-	esac
-	;;
-  status)
-       status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
-       ;;
-  #reload|force-reload)
-	#
-	# If do_reload() is not implemented then leave this commented out
-	# and leave 'force-reload' as an alias for 'restart'.
-	#
-	#log_daemon_msg "Reloading $DESC" "$NAME"
-	#do_reload
-	#log_end_msg $?
-	#;;
-  restart|force-reload)
-	#
-	# If the "reload" option is implemented then remove the
-	# 'force-reload' alias
-	#
-	log_daemon_msg "Restarting $DESC" "$NAME"
-	do_stop
-	case "$?" in
-	  0|1)
-		do_start
-		case "$?" in
-			0) log_end_msg 0 ;;
-			1) log_end_msg 1 ;; # Old process is still running
-			*) log_end_msg 1 ;; # Failed to start
-		esac
-		;;
-	  *)
-	  	# Failed to stop
-		log_end_msg 1
-		;;
-	esac
-	;;
-  *)
-	#echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload}" >&2
-	echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
-	exit 3
-	;;
+    start)
+        # Make sure there is not already a node running
+        RES=`$NODETOOL ping`
+        echo "$NODETOOL"
+        if [ "$RES" = "pong" ]; then
+            echo "Node is already running!"
+            exit 1
+        fi
+        HEART_COMMAND="/etc/init.d/$SCRIPT start"
+        echo "HEART_COMMAND: $HEART_COMMAND"
+        export HEART_COMMAND
+        mkdir -p $PIPE_DIR
+        echo "PIPE_DIR: $PIPE_DIR"
+        shift # remove $1
+        $ERTS_PATH/run_erl -daemon $PIPE_DIR $RUNNER_LOG_DIR "exec /etc/init.d/$SCRIPT console $@" 2>&1
+        ;;
+
+    stop)
+        # Wait for the node to completely stop...
+        case `uname -s` in
+            Linux|Darwin|FreeBSD|DragonFly|NetBSD|OpenBSD)
+                # PID COMMAND
+                echo "ps ax -o pid= -o command=|\
+                                    grep "$RUNNER_BASE_DIR/.*/[b]eam"|awk '{print $1}'"
+                PID=`ps ax -o pid= -o command=|\
+                    grep "$RUNNER_BASE_DIR/.*/[b]eam"|awk '{print $1}'`
+                ;;
+            SunOS)
+                # PID COMMAND
+                PID=`ps -ef -o pid= -o args=|\
+                    grep "$RUNNER_BASE_DIR/.*/[b]eam"|awk '{print $1}'`
+                ;;
+            CYGWIN*)
+                # UID PID PPID TTY STIME COMMAND
+                PID=`ps -efW|grep "$RUNNER_BASE_DIR/.*/[b]eam"|awk '{print $2}'`
+                ;;
+        esac
+        $NODETOOL stop
+#        ES=$?
+#       if [ "$ES" -ne 0 ]; then
+#            exit $ES
+#        fi
+        if [ "$PID" != "" ]
+        then
+            while `kill -0 $PID 2>/dev/null`;
+            do
+                sleep 1
+            done
+        fi
+        ;;
+
+    restart)
+        ## Restart the VM without exiting the process
+        $NODETOOL restart
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
+    reboot)
+        ## Restart the VM completely (uses heart to restart it)
+        $NODETOOL reboot
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
+    ping)
+        ## See if the VM is alive
+        $NODETOOL ping
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
+    status)
+        ## See if the VM is alive
+        $NODETOOL status
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
+
+    attach)
+        # Make sure a node IS running
+        RES=`$NODETOOL ping`
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            echo "Node is not running!"
+            exit $ES
+        fi
+
+        shift
+        exec $ERTS_PATH/to_erl $PIPE_DIR
+        ;;
+
+    console|console_clean)
+        # .boot file typically just $SCRIPT (ie, the app name)
+        # however, for debugging, sometimes start_clean.boot is useful:
+        case "$1" in
+            console)        BOOTFILE=$SCRIPT ;;
+            console_clean)  BOOTFILE=start_clean ;;
+        esac
+        # Setup beam-required vars
+        ROOTDIR=$RUNNER_BASE_DIR
+        BINDIR=$ROOTDIR/erts-$ERTS_VSN/bin
+        EMU=beam
+        PROGNAME=`echo $0 | sed 's/.*\\///'`
+        CMD="$BINDIR/erlexec -boot $RUNNER_BASE_DIR/releases/$APP_VSN/$BOOTFILE -mode embedded -config $CONFIG_PATH -args_file $VMARGS_PATH -- ${1+"$@"}"
+        export EMU
+        export ROOTDIR
+        export BINDIR
+        export PROGNAME
+
+        # Dump environment info for logging purposes
+        echo "Exec: $CMD"
+        echo "Root: $ROOTDIR"
+
+        # Log the startup
+        logger -t "$SCRIPT[$$]" "Starting up"
+
+        # Start the VM
+        exec $CMD
+        ;;
+
+    *)
+        echo "Usage: $SCRIPT {start|stop|restart|reboot|ping|console|console_clean|attach|status}"
+        exit 1
+        ;;
 esac
 
-:
+cd  $CUR_PWD
+
+exit 0

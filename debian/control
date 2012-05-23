@@ -2,7 +2,7 @@ Source: master-slave-detector
 Section: unknown
 Priority: extra
 Maintainer: Anton Matveenko <antmat@nigma.ru>
-Build-Depends: debhelper (>= 7.0.50~)
+Build-Depends: debhelper (>= 7.0.50~), erlang(>= 1:15.b.1-dfsg-1~bpo60+1)
 Standards-Version: 3.8.4
 Homepage: <insert the upstream URL, if relevant>
 #Vcs-Git: git://git.debian.org/collab-maint/master-slave-detector.git

@@ -17,9 +17,32 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
+process_users()
+{
+	if ! getent group contextsys >/dev/null; then
+		# Adding system group: contextsys.
+		addgroup --system contextsys >/dev/null
+	fi
+
+	if ! getent passwd msdetector >/dev/null; then
+		# Adding system user: contextsys.
+		adduser \
+			--system \
+			--ingroup contextsys \
+			--no-create-home \
+			--home /nonexistent \
+			--gecos "Master slave daemon" \
+			--shell /bin/sh \
+			msdetector  >/dev/null
+	fi
+
+}
+
+
 
 case "$1" in
     configure)
+		process_users
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
