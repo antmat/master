@@ -1,0 +1,3 @@
+#!/bin/bash
+
+erl -pa apps/master/ebin/ -pa deps/gen_leader/ebin/ -name master@antibot.nigma.ru -setcookie asdfasdfasdf -config rel/files/sys.config -s master start
