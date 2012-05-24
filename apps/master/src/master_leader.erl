@@ -176,8 +176,13 @@ from_leader(_Synch, State, _Election) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_DOWN(_Node, State, _Election) ->
-	io:format("handle down ~p ~n ~p ~n ~p~n",[_Node, State, _Election]),
-    {ok, State}.
+	case nodes() of
+		[] -> io:format("is slave \n "),
+			[SlaveScript] = [X || {slave_script,X} <- application:get_all_env(master)],
+			spawn(fun() -> os:cmd(SlaveScript) end),
+			{ok, State#state{state = slave}};
+		_ -> {ok, State}
+	end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -192,7 +197,6 @@ handle_DOWN(_Node, State, _Election) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call(status, _From, State, _Election) ->
-	io:format("election ~p~n",[_Election]),
 	{reply, State#state.state, State};
 
 handle_call(_Request, _From, State, _Election) ->
@@ -255,4 +259,30 @@ code_change(_OldVsn, State, _Election, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+%
+%-record(election, {
+%          leader = none             :: 'none' | pid(),
+%          previous_leader = none    :: 'none' | pid(),
+%          name                      :: name(),
+%          leadernode = none         :: node(),
+%          candidate_nodes = []      :: [node()],
+%          worker_nodes = []         :: [node()],
+%          down = []                 :: [node()],
+%          monitored = []            :: [{mon_ref(), node()}],
+%          buffered = []             :: [{reference(),caller_ref()}],
+%          seed_node = none          :: 'none' | node(),
+%          status                    :: status(),
+%          elid                      :: elid(),
+%          acks = []                 :: [node()],
+%          work_down = []            :: [node()],
+%          cand_timer_int            :: integer(),
+%          cand_timer                :: term(),
+%          pendack                   :: node(),
+%          incarn                    :: incarn(),
+%          nextel                    :: integer(),
+%          %% all | one. When `all' each election event
+%          %% will be broadcast to all candidate nodes.
+%          bcast_type                :: bcast_type()
+%         }).
 
