@@ -186,15 +186,17 @@ from_leader(_Synch, State, _Election) ->
 %%                                  {ok, Broadcast, State} |
 %% @end
 %%--------------------------------------------------------------------
-handle_DOWN(_Node, State, _Election) ->
+handle_DOWN(_Node, State = {state,master}, _Election) ->
 	case nodes() of
 		[] -> io:format("is slave \n "),
 			[SlaveScript] = [X || {slave_script,X} <- application:get_all_env(master)],
 			spawn(fun() -> os:cmd(SlaveScript) end),
 			{ok, State#state{state = slave}};
 		_ -> {ok, State}
-	end.
+	end;
 
+handle_DOWN(_Node,State,_Election) ->
+	{ok,State}.
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
