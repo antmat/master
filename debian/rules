@@ -36,5 +36,9 @@ override_dh_installdeb:
 	find ${DEBIAN_PATH}  -type f  -exec sed -i  "s/#VM_CONFIG#/"`echo '${VM_CONFIG}' | sed 's@/@\\\\/@g'`"/g" {} +
 	find ${DEBIAN_PATH}  -type f  -exec sed -i  "s/#APP_CONFIG#/"`echo '${APP_CONFIG}' | sed 's@/@\\\\/@g'`"/g" {} +
 
+override_dh_fixperms:
+		dh_fixperms
+		chmod a+x ${DEBIAN_PATH}/${APP_PATH}/bin/master
+
 %:
 	dh $@ 
