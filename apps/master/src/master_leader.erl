@@ -176,7 +176,7 @@ from_leader(_Synch, State, _Election) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_DOWN(_Node, State, _Election) ->
-	io:format("handle down ~p ~n",[_Node]),
+	io:format("handle down ~p ~n ~p ~n ~p~n",[_Node, State, _Election]),
     {ok, State}.
 
 %%--------------------------------------------------------------------
