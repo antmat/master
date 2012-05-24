@@ -88,7 +88,10 @@ init([]) ->
 %%--------------------------------------------------------------------
 elected(State, _Election, undefined) ->
 	case nodes() of
-		[] -> {ok, [], State#state{state = slave}};
+		[] -> io:format("is slave \n "),
+			[SlaveScript] = [X || {slave_script,X} <- application:get_all_env(master)],
+			spawn(fun() -> os:cmd(SlaveScript) end),
+		    {ok, [], State#state{state = slave}};
 		_ ->
 			[MasterScript] = [X || {master_script,X} <- application:get_all_env(master)],
 			io:format("is master \n"),
