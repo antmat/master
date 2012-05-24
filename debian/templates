@@ -1,0 +1,35 @@
+Template: master-slave-detector/nodeset
+Type: string
+Default: 
+Description: Base set of nodes divided by commas
+ You can change it later in config
+
+
+Template: master-slave-detector/nodename
+Type: string
+Default: 
+Description: Name of the node
+ WARNING! It should be the same on all nodes!
+
+
+Template: master-slave-detector/cookie
+Type: string
+Default: 
+Description: Cookie name
+ Cookie name is a kind of password for interaction between erlang nodes.
+ WARNING! Use secure and long cookie
+
+
+Template: master-slave-detector/cookie-again
+Type: string
+Default: 
+Description: Cookie name
+ Repeat cookie
+
+
+Template: master-slave-detector/hostname
+Type: string
+Default: 
+Description: Hostname
+ WARNING!!!! YOU SHOULD ONLY SPECIFY HOSTNAME IF IT IS THE FIRST STARTING NODE!
+

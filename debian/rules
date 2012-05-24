@@ -13,7 +13,8 @@ APP_PATH=/var/lib/msdetector
 DEBIAN_PATH=debian/master-slave-detector
 TARGET_PATH=$(DEBIAN_PATH)/$(APP_PATH)
 CONF_DIR=/etc/msdetector
-
+VM_CONFIG=$(CONF_DIR)/vm.args
+APP_CONFIG=$(CONF_DIR)/app.config
 
 override_dh_auto_clean:
 	./rebar clean
@@ -29,6 +30,11 @@ override_dh_auto_install:
 	cp rel/master/releases/1/vm.args ${DEBIAN_PATH}/${CONF_DIR}/
 	cp rel/master/releases/1/sys.config ${DEBIAN_PATH}/${CONF_DIR}/app.config
 	rsync --exclude '.svn' -aq  rel/master/releases rel/master/bin rel/master/erts* rel/master/lib ${TARGET_PATH}/
+
+override_dh_installdeb:
+	dh_installdeb
+	find ${DEBIAN_PATH}  -type f  -exec sed -i  "s/#VM_CONFIG#/"`echo '${VM_CONFIG}' | sed 's@/@\\\\/@g'`"/g" {} +
+	find ${DEBIAN_PATH}  -type f  -exec sed -i  "s/#APP_CONFIG#/"`echo '${APP_CONFIG}' | sed 's@/@\\\\/@g'`"/g" {} +
 
 %:
 	dh $@ 

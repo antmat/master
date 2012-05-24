@@ -5,6 +5,8 @@
 
 set -e
 
+. /usr/share/debconf/confmodule
+
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
 #        * <old-postinst> `abort-upgrade' <new version>
@@ -16,6 +18,35 @@ set -e
 #          <conflicting-package> <version>
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
+
+VM_CONFIG=#VM_CONFIG#
+APP_CONFIG=#APP_CONFIG#
+DEBUG=true
+
+debug()
+{
+	if [ "$DEBUG" = "true" ]
+	then
+		case $2 in
+			1)
+				/bin/echo -e "\033[32m$1 \033[0m"
+				;;
+			2)
+				/bin/echo -e "\033[33m$1 \033[0m"
+				;;
+			3)
+				/bin/echo -e "\033[31m$1 \033[0m"
+				;;
+			4)
+				/bin/echo -e "\033[42m\033[1m$1 \033[0m"
+				;;
+			*)
+				/bin/echo -e "\033[37m$1 \033[0m"
+				;;
+		esac
+	fi
+}
+
 
 process_users()
 {
@@ -41,17 +72,58 @@ process_users()
 
 
 case "$1" in
-    configure)
+	configure)
+		debug "start"
 		process_users
-    ;;
+		debug 1
+		db_get master-slave-detector/nodename
+		debug 2
+		NODENAME=$RET
+		sed -i "s/#NAME#/$NODENAME/g" $VM_CONFIG 
+		db_get master-slave-detector/cookie
+		sed -i "s/#COOKIE#/$RET/g" $VM_CONFIG 
+		db_set master-slave-detector/cookie ""
+		db_set master-slave-detector/cookie-again ""
 
-    abort-upgrade|abort-remove|abort-deconfigure)
-    ;;
+		debug 3
+		db_get master-slave-detector/hostname
+		debug 4
+		if [ "$RET" != "" ]
+		then
+			NODESET="'$NODENAME@$RET'"	
+		fi
+		debug 5
+		db_get master-slave-detector/nodeset
+		debug 6
+		for i in `seq 1 1000` 
+		do
+			NODE=`echo "$RET" | /usr/bin/awk '{split(\$0,a,","); print a['$i']}'`
+			if [ "$NODE" = "" ]
+			then
+				break
+			else			
+				if [ "NODESET" != "" ]
+				then
+					NODESET=$NODESET','
+				fi
+				NODESET=$NODESET"'$NODENAME@$NODE'"
+			fi;
+		done
+		debug 7
 
-    *)
-        echo "postinst called with unknown argument \`$1'" >&2
-        exit 1
-    ;;
+		sed -i "s/#NODESET#/$NODESET/g" $APP_CONFIG
+		debug 8
+
+
+		;;
+
+	abort-upgrade|abort-remove|abort-deconfigure)
+		;;
+
+	*)
+		echo "postinst called with unknown argument \`$1'" >&2
+		exit 1
+		;;
 esac
 
 # dh_installdeb will replace this with shell code automatically
@@ -59,4 +131,5 @@ esac
 
 #DEBHELPER#
 
+db_stop
 exit 0
