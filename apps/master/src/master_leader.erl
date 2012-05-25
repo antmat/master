@@ -87,11 +87,17 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 elected(State, _Election, undefined) ->
-	[MasterScript] = [X || {master_script,X} <- application:get_all_env(master)],
-	io:format("is master \n"),
-	spawn(fun() -> os:cmd(MasterScript) end),
-    Synch = [],
-    {ok, Synch, State#state{state = master}};
+	case nodes() of
+		[] -> io:format("is slave \n "),
+			[SlaveScript] = [X || {slave_script,X} <- application:get_all_env(master)],
+			spawn(fun() -> os:cmd(SlaveScript) end),
+		    {ok, [], State#state{state = slave}};
+		_ ->
+			[MasterScript] = [X || {master_script,X} <- application:get_all_env(master)],
+			io:format("is master \n"),
+			spawn(fun() -> os:cmd(MasterScript) end),
+			{ok, [], State#state{state = master}}
+	end;
 
 %%--------------------------------------------------------------------
 %% @private
@@ -104,7 +110,15 @@ elected(State, _Election, undefined) ->
 %%--------------------------------------------------------------------
 elected(State, _Election, _Node) ->
 	io:format("node was added  ~p \n",[_Node]),
-    {reply, [], State}.
+	case State#state.state of
+		master -> {reply, [], State};
+		slave ->
+        	[MasterScript] = [X || {master_script,X} <- application:get_all_env(master)],
+	        io:format("is master \n"),
+	        spawn(fun() -> os:cmd(MasterScript) end),
+		   	{reply, [], State#state{state = master}}
+	end.
+
 
 %%--------------------------------------------------------------------
 %% @private
@@ -175,9 +189,17 @@ from_leader(_Synch, State, _Election) ->
 %%                                  {ok, Broadcast, State} |
 %% @end
 %%--------------------------------------------------------------------
-handle_DOWN(_Node, State, _Election) ->
-    {ok, State}.
+handle_DOWN(_Node, State = {state,master}, _Election) ->
+	case nodes() of
+		[] -> io:format("is slave \n "),
+			[SlaveScript] = [X || {slave_script,X} <- application:get_all_env(master)],
+			spawn(fun() -> os:cmd(SlaveScript) end),
+			{ok, State#state{state = slave}};
+		_ -> {ok, State}
+	end;
 
+handle_DOWN(_Node,State,_Election) ->
+	{ok,State}.
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
