@@ -246,7 +246,8 @@ handle_info(recheck,State) ->
 	case length(nodes()) of
 		0 -> timer:send_after(1000,recheck),
 			{noreply,State};
-		2 -> {stop,normal,State}
+		2 -> {stop,normal,State};
+		_ -> {stop,normal,State}
 	end;
 handle_info(_Info, State) ->
     {noreply, State}.
