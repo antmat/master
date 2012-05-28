@@ -194,6 +194,7 @@ handle_DOWN(_Node, State = {state,master}, _Election) ->
 		[] -> io:format("is slave \n "),
 			[SlaveScript] = [X || {slave_script,X} <- application:get_all_env(master)],
 			spawn(fun() -> os:cmd(SlaveScript) end),
+			timer:send_after(1000,recheck),
 			{ok, State#state{state = slave}};
 		_ -> {ok, State}
 	end;
@@ -241,6 +242,12 @@ handle_cast(_Msg, State, _Election) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info(recheck,State) ->
+	case length(nodes()) of
+		0 -> timer:send_after(1000,recheck),
+			{noreply,State};
+		2 -> {stop,normal,State}
+	end;
 handle_info(_Info, State) ->
     {noreply, State}.
 
