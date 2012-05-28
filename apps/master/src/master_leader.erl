@@ -214,6 +214,7 @@ handle_DOWN(_Node,State,_Election) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call(status, _From, State, _Election) ->
+	io:format("~p~n",[_Election]),
 	{reply, State#state.state, State};
 
 handle_call(_Request, _From, State, _Election) ->
