@@ -1,12 +1,9 @@
 {application, master,
- [
-  {description, "master for master-slave cluster"},
-  {vsn, "1"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib
-                 ]},
-  {mod, { master_app, []}},
-  {env, []}
- ]}.
+    [   {description, "master slave app"},
+        {vsn, "0.3"},
+        {registered, []},
+        {applications,
+            [kernel
+            ,stdlib
+            ]},
+        {mod, {master, []}}]}.
