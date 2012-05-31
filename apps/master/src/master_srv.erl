@@ -58,7 +58,7 @@ start_link() ->
 
 % gen_server callbacks
 init(State) ->
-	net_kernel:monitor_nodes(true),
+	net_kernel:monitor_nodes(true,[{node_type,visible}]),
 	net_kernel:set_net_ticktime(2),
 	[Min] = [X || {minimal,X} <- application:get_all_env(master)],
 	[Path] = [X || {path, X} <- application:get_all_env(master)],
@@ -147,7 +147,7 @@ handle_info({reconnect, Node},State = #state{ bad_count = Bad}) ->
 	end;
 
 % node up message
-handle_info({nodeup,Node},State = #state{ nodes = Nodes
+handle_info({nodeup,Node,_},State = #state{ nodes = Nodes
 		                                  , active = Active
 										  , minimal = Min
 										  , path = Path
@@ -162,10 +162,11 @@ handle_info({nodeup,Node},State = #state{ nodes = Nodes
 						, dead = Dead -- [Node] }};
 
 % node down messate
-handle_info({nodedown,Node},State = #state{ minimal = Min
+handle_info({nodedown,Node,A},State = #state{ minimal = Min
 		                                    , active = Active
 											, dead = Dead}) ->
 	timer:send_after(2000,{reconnect, Node}),
+	io:format("nodedown ~p~n ",[A]),
     spawn(fun() -> make_new_master(lists:usort(Active -- [Node]), Min) end),
 	{noreply,State#state{ active = Active -- [Node]
 			            , dead = lists:usort([Node|Dead])}};
