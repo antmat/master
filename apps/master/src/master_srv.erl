@@ -197,7 +197,6 @@ make_new_master(Active) ->
 	case who_is_master() of
 		[] ->
 			NextMaster = minimal_cpu(Active),
-			io:format("next master ~p ~n", NextMaster),
 			if
 			   	NextMaster =:= node() -> set_master(NextMaster);
 				true -> skip
