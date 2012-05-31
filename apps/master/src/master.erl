@@ -37,7 +37,9 @@ start(_,_) ->
 			{error,bad_config};
 		Dead_script == [] -> io:format("You must set dead_script in sys.config"),
 			{error,bad_config};
-		true ->	supervisor:start_link({local,?MODULE},?MODULE, [])
+		true ->	
+			application:start(os_mon),
+			supervisor:start_link({local,?MODULE},?MODULE, [])
 	end.
 
 stop(_) ->

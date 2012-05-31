@@ -196,7 +196,7 @@ make_new_master(Active,Min) ->
 make_new_master(Active) ->
 	case who_is_master() of
 		[] ->
-			NextMaster = hd(Active),
+			NextMaster = minimal_cpu(Active),
 			if
 			   	NextMaster =:= node() -> set_master(NextMaster)
 			end;
@@ -205,6 +205,19 @@ make_new_master(Active) ->
 				M =:= node() -> set_master(message)
 			end
 	end.
+
+minimal_cpu(Nodes) -> 
+	All = [{rpc:call(X,cpu_sup,avg5,[]),X} || X <- Nodes ],
+	minimal_cpu(All,hd(All)).
+
+minimal_cpu([],{_,Win}) -> Win;
+minimal_cpu([{Cpu,Node_name}|Tail],Win = {Cpu_win,_}) ->
+	if
+		Cpu < Cpu_win -> minimal_cpu(Tail,{Cpu,Node_name});
+		Cpu > Cpu_win -> minimal_cpu(Tail,Win);
+		Cpu == Cpu_win -> minimal_cpu(Tail,Win)
+	end.
+
 
 make_work(slave, Path) -> 
 	io:format("i am slave"),
