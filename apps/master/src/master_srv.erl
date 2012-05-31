@@ -127,25 +127,6 @@ handle_call(_Request, _From, State) ->
         Reply = ok,
         {reply, Reply, State}.
 
-% try reconnect to node
-handle_info({reconnect, Node},State = #state{ bad_count = Bad}) ->
-	case net_kernel:connect(Node) of
-		true -> {noreply,State#state{bad_count = 0}};
-		false ->
-			if
-				( Bad =< 10 ) -> timer:send_after(2000, {reconnect, Node}),
-					{noreply, State#state{bad_count = Bad +1}};
-				( Bad > 10 ) -> timer:send_after(4000, {reconnect, Node}),
-					{noreply, State#state{bad_count = Bad + 1}};
-				( Bad > 20 ) -> timer:send_after(8000, {reconnect, Node}),
-					{noreply, State#state{bad_count = Bad +1}};
-				( Bad > 30 ) -> timer:send_after(16000, {reconnect, Node}),
-					{noreply, State#state{bad_count = Bad +1}};
-				( Bad > 40 ) -> timer:send_after(32000, {reconnect, Node}),
-					{noreply, State#state{bad_count = Bad +1}}
-			end
-	end;
-
 % node up message
 handle_info({nodeup,Node,_},State = #state{ nodes = Nodes
 		                                  , active = Active
@@ -165,7 +146,7 @@ handle_info({nodeup,Node,_},State = #state{ nodes = Nodes
 handle_info({nodedown,Node,A},State = #state{ minimal = Min
 		                                    , active = Active
 											, dead = Dead}) ->
-%	timer:send_after(2000,{reconnect, Node}),
+	reconnect_srt:reconnect(Node),
 	io:format("nodedown ~p~n ",[A]),
     spawn(fun() -> make_new_master(lists:usort(Active -- [Node]), Min) end),
 	{noreply,State#state{ active = Active -- [Node]
