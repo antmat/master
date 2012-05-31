@@ -146,7 +146,7 @@ handle_info({nodeup,Node,_},State = #state{ nodes = Nodes
 handle_info({nodedown,Node,A},State = #state{ minimal = Min
 		                                    , active = Active
 											, dead = Dead}) ->
-	reconnect_srt:reconnect(Node),
+	reconnect_srv:reconnect(Node),
 	io:format("nodedown ~p~n ",[A]),
     spawn(fun() -> make_new_master(lists:usort(Active -- [Node]), Min) end),
 	{noreply,State#state{ active = Active -- [Node]
