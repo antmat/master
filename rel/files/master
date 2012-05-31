@@ -194,7 +194,7 @@ case "$1" in
 			echo "USAGE: master connect master@examle.org"
 			exit 1
 		fi
-		$NODETOOL rpcterms master connect $2.
+		$NODETOOL rpcterms master connect \'$2\'.
         ES=$?
         if [ "$ES" -ne 0 ]; then
             exit $ES
