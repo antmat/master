@@ -58,7 +58,7 @@ start_link() ->
 
 % gen_server callbacks
 init(State) ->
-	net_kernel:monitor_nodes(true,[{node_type,visible}]),
+	net_kernel:monitor_nodes(true,[nodedown_reason]),
 	net_kernel:set_net_ticktime(2),
 	[Min] = [X || {minimal,X} <- application:get_all_env(master)],
 	[Path] = [X || {path, X} <- application:get_all_env(master)],
