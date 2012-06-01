@@ -19,7 +19,6 @@ start_link() ->
         gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 init([]) ->
-	timer:send_after(1000,check_la),
     {ok, #state{}}.
 
 handle_cast({reconnect,Node}, State) ->
@@ -29,8 +28,6 @@ handle_cast({reconnect,Node}, State) ->
 handle_cast(_Msg, State) ->
         {noreply, State}.
 
-handle_info(check_la,State) ->
-	cpu_sup:avg1();
 % try reconnect to node
 handle_info({reconnect, Node},State = #state{ bad_count = Bad}) ->
 	case net_kernel:connect(Node) of
