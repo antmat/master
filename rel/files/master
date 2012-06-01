@@ -116,14 +116,72 @@ exit $ES
         fi
         ;;
 
-    status)
+    who_am_i)
         ## See if the VM is alive
-        $NODETOOL status
+        $NODETOOL rpcterms master who_am_i ""
         ES=$?
         if [ "$ES" -ne 0 ]; then
 exit $ES
         fi
         ;;
+
+    who_is_master)
+        ## See if the VM is alive
+        $NODETOOL rpcterms master who_is_master ""
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
+    who_is_slaves)
+        ## See if the VM is alive
+        $NODETOOL rpcterms master who_is_slaves ""
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
+    who_is_live)
+        ## See if the VM is alive
+        $NODETOOL rpcterms master who_is_live ""
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
+    who_is_dead)
+        ## See if the VM is alive
+        $NODETOOL rpcterms master who_is_dead ""
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
+    cluster_status)
+        ## See if the VM is alive
+        $NODETOOL rpcterms master cluster_status ""
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
+	connect) 
+		if [ $# -ne 2 ] ; then
+			echo "USAGE: master connect master@examle.org"
+			exit 1
+		fi
+		$NODETOOL rpcterms master connect \'$2\'.
+        ES=$?
+        if [ "$ES" -ne 0 ]; then
+            exit $ES
+        fi
+        ;;
+
 
     attach)
         # Make sure a node IS running
@@ -168,7 +226,8 @@ exec $ERTS_PATH/to_erl $PIPE_DIR
         ;;
 
     *)
-        echo "Usage: $SCRIPT {status|start|stop|restart|reboot|ping|console|console_clean|attach}"
+        echo "Usage: $SCRIPT {start|stop|restart|reboot|ping|console|console_clean|attach}"
+        echo "$SCRIPT {who_am_i|who_is_master|who_is_slaves|who_is_live|who_is_dead|cluster_status|connect NODE}"
         exit 1
         ;;
 esac
