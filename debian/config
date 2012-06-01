@@ -45,10 +45,10 @@ get_password()
 if [ "$1" = "configure" ] && [ -z "$2" ] || [ "$1" = "reconfigure" ]
 then
 	get_password cookie
-	db_input high master-slave-detector/nodename || true
-	db_go
-	db_input high master-slave-detector/hostname || true
-	db_go
+#	db_input high master-slave-detector/nodename || true
+#	db_go
+#	db_input high master-slave-detector/hostname || true
+#	db_go
 	db_input high master-slave-detector/nodeset || true
 	db_go
 fi
