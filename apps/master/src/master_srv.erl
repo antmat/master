@@ -137,7 +137,8 @@ handle_info({nodeup,Node,_},State = #state{ nodes = Nodes
 		true -> skip;
 		false -> save([Node|Nodes],Path)
 	end,
-	spawn(fun() -> make_new_master(lists:usort([Node|Active]),Min) end),
+%	spawn(fun() -> make_new_master(lists:usort([Node|Active]),Min) end),
+	master_local:new_master(lists:usort([Node|Active]),Min),
 	{noreply,State#state{ nodes = lists:usort([Node|Nodes])
 			            , active = lists:usort([Node|Active])
 						, dead = Dead -- [Node] }};
@@ -148,7 +149,8 @@ handle_info({nodedown,Node,A},State = #state{ minimal = Min
 											, dead = Dead}) ->
 	reconnect_srv:reconnect(Node),
 	io:format("nodedown ~p~n ",[A]),
-    spawn(fun() -> make_new_master(lists:usort(Active -- [Node]), Min) end),
+%    spawn(fun() -> make_new_master(lists:usort(Active -- [Node]), Min) end),
+	master_local:new_master(lists:usort(Active -- [Node]),Min),
 	{noreply,State#state{ active = Active -- [Node]
 			            , dead = lists:usort([Node|Dead])}};
 
@@ -169,40 +171,6 @@ load(Path) ->
 
 save(Nodes,Path) -> file:write_file(Path,io_lib:fwrite("~p.\n",[Nodes])).
 
-make_new_master(Active,Min) ->
-	timer:sleep(300),
-	case length(Active) >= Min of
-		false -> set_master(none);
-		true -> make_new_master(Active)
-	end.
-make_new_master(Active) ->
-	case who_is_master() of
-		[] ->
-			NextMaster = minimal_cpu(Active),
-			if
-			   	NextMaster =:= node() -> set_master(NextMaster);
-				true -> skip
-			end;
-		[M] -> 
-			if
-				M =:= node() -> set_master(message);
-				true -> skip
-			end
-	end.
-
-minimal_cpu(Nodes) -> 
-	All = [{rpc:call(X,cpu_sup,avg5,[]),X} || X <- Nodes ],
-	minimal_cpu(All,hd(All)).
-
-minimal_cpu([],{_,Win}) -> Win;
-minimal_cpu([{Cpu,Node_name}|Tail],Win = {Cpu_win,_}) ->
-	if
-		Cpu < Cpu_win -> minimal_cpu(Tail,{Cpu,Node_name});
-		Cpu > Cpu_win -> minimal_cpu(Tail,Win);
-		Cpu == Cpu_win -> minimal_cpu(Tail,Win)
-	end.
-
-
 make_work(slave, Path) -> 
 	io:format("i am slave"),
 	spawn(fun() -> os:cmd(Path) end);
@@ -213,3 +181,5 @@ make_work(skip, Path) ->
 	io:format("cluster is not active"),
 	spawn(fun() -> os:cmd(Path) end);
 make_work(_, _) -> error.
+
+

@@ -48,7 +48,8 @@ stop(_) ->
 init(_) ->
 	Server = {master_srv, {master_srv, start_link, []}, permanent, 500, worker, [master_srv]},
 	Reconnect = {reconnect_srv, {reconnect_srv, start_link, []}, permanent, 500, worker, [reconnect_srv]},
-	{ok, {{one_for_one, 15, 5}, [Server, Reconnect]}}.
+	NewMaster = {master_local, {master_local, start_link, []}, permanent, 500, worker, [master_local]},
+	{ok, {{one_for_one, 15, 5}, [Server, Reconnect, NewMaster]}}.
 
 %% public API
 who_am_i() -> 
